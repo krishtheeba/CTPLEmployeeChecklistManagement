@@ -1,6 +1,10 @@
 import sqlite3
 from datetime import datetime
 
+from datetime import timezone, timedelta
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
 DB_NAME = "employee_checklist.db"
 
 
@@ -41,8 +45,7 @@ def create_tables():
     CREATE TABLE IF NOT EXISTS tasks (
         task_id INTEGER PRIMARY KEY AUTOINCREMENT,
         checklist_id INTEGER,
-        task_name TEXT,
-        task_description TEXT,
+        task_desc TEXT,
         status TEXT,
         created_time TEXT,
         completed_time TEXT
@@ -138,8 +141,8 @@ def login(employee_name, password):
 # CHECKLIST
 # =====================================================
 def get_or_create_checklist(employee_id):
-    today = datetime.now().strftime("%Y-%m-%d")
-    month = datetime.now().strftime("%B")
+    today = datetime.now(IST).strftime("%Y-%m-%d")
+    month = datetime.now(IST).strftime("%B")
 
     conn = get_connection()
     cur = conn.cursor()
@@ -176,23 +179,22 @@ def get_or_create_checklist(employee_id):
 # =====================================================
 # TASKS
 # =====================================================
-def add_task(checklist_id, task_name, task_description=""):
+def add_task(checklist_id, task):
     conn = get_connection()
     cur = conn.cursor()
 
-    now = datetime.now().isoformat()
+    now = datetime.now(IST).isoformat()
 
     cur.execute("""
     INSERT INTO tasks (
         checklist_id,
-        task_name,
-        task_description,
+        task_desc,
         status,
         created_time,
         completed_time
     )
-    VALUES (?, ?, ?, 'Pending', ?, '')
-    """, (checklist_id, task_name, task_description, now))
+    VALUES (?, ?, 'Pending', ?, '')
+    """, (checklist_id, task, now))
 
     conn.commit()
     conn.close()
@@ -205,7 +207,7 @@ def complete_task(task_id):
     conn = get_connection()
     cur = conn.cursor()
 
-    now = datetime.now().isoformat()
+    now = datetime.now(IST).isoformat()
 
     cur.execute("""
     UPDATE tasks
@@ -222,7 +224,7 @@ def complete_task(task_id):
 # EMPLOYEE TASKS
 # =====================================================
 def get_tasks(employee_id):
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(IST).strftime("%Y-%m-%d")
 
     conn = get_connection()
     cur = conn.cursor()
@@ -230,8 +232,7 @@ def get_tasks(employee_id):
     cur.execute("""
     SELECT
         t.task_id,
-        t.task_name,
-        t.task_description,
+        t.task_desc,
         t.status,
         t.created_time,
         t.completed_time
@@ -240,7 +241,7 @@ def get_tasks(employee_id):
         ON t.checklist_id = c.checklist_id
     WHERE c.employee_id=?
         AND c.checklist_date=?
-    ORDER BY t.task_id DESC
+    ORDER BY t.task_id 
     """, (employee_id, today))
 
     data = cur.fetchall()
@@ -253,7 +254,7 @@ def get_tasks(employee_id):
 # ADMIN DATA
 # =====================================================
 def get_all_employee_status():
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(IST).strftime("%Y-%m-%d")
 
     conn = get_connection()
     cur = conn.cursor()
@@ -263,8 +264,7 @@ def get_all_employee_status():
         e.employee_id,
         e.employee_name,
         e.department,
-        t.task_name,
-        t.task_description,
+        t.task_desc,
         t.status,
         t.created_time,
         t.completed_time
